@@ -57,7 +57,7 @@ class Bandit:
 
     # get an action for this bandit
     def act(self):
-        if self.rng.rand() < self.epsilon:
+        if self.rng.uniform() < self.epsilon:
             return self.rng.choice(self.indices)
 
         if self.UCB_param is not None:
