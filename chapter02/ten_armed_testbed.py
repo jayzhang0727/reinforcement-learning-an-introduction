@@ -26,7 +26,7 @@ class Bandit:
     # @gradient: if True, use gradient based bandit algorithm
     # @gradient_baseline: if True, use average reward as baseline for gradient based bandit algorithm
     def __init__(self, k_arm=10, epsilon=0., initial=0., step_size=0.1, sample_averages=False, UCB_param=None,
-                 gradient=False, gradient_baseline=False, true_reward=0.):
+                 gradient=False, gradient_baseline=False, true_reward=0., seed=42):
         self.k = k_arm
         self.step_size = step_size
         self.sample_averages = sample_averages
@@ -39,10 +39,11 @@ class Bandit:
         self.true_reward = true_reward
         self.epsilon = epsilon
         self.initial = initial
+        self.rng = np.random.default_rng(seed)
 
     def reset(self):
         # real reward for each action
-        self.q_true = np.random.randn(self.k) + self.true_reward
+        self.q_true = self.rng.standard_normal(self.k) + self.true_reward
 
         # estimation for each action
         self.q_estimation = np.zeros(self.k) + self.initial
@@ -56,27 +57,27 @@ class Bandit:
 
     # get an action for this bandit
     def act(self):
-        if np.random.rand() < self.epsilon:
-            return np.random.choice(self.indices)
+        if self.rng.rand() < self.epsilon:
+            return self.rng.choice(self.indices)
 
         if self.UCB_param is not None:
             UCB_estimation = self.q_estimation + \
                 self.UCB_param * np.sqrt(np.log(self.time + 1) / (self.action_count + 1e-5))
             q_best = np.max(UCB_estimation)
-            return np.random.choice(np.where(UCB_estimation == q_best)[0])
+            return self.rng.choice(np.where(UCB_estimation == q_best)[0])
 
         if self.gradient:
             exp_est = np.exp(self.q_estimation)
             self.action_prob = exp_est / np.sum(exp_est)
-            return np.random.choice(self.indices, p=self.action_prob)
+            return self.rng.choice(self.indices, p=self.action_prob)
 
         q_best = np.max(self.q_estimation)
-        return np.random.choice(np.where(self.q_estimation == q_best)[0])
+        return self.rng.choice(np.where(self.q_estimation == q_best)[0])
 
     # take an action, update estimation for this action
     def step(self, action):
-        # generate the reward under N(real reward, 1)
-        reward = np.random.randn() + self.q_true[action]
+        # generate the reward under Normal(real reward, 1)
+        reward = self.rng.standard_normal() + self.q_true[action]
         self.time += 1
         self.action_count[action] += 1
         self.average_reward += (reward - self.average_reward) / self.time
